@@ -133,6 +133,7 @@
             text-align: center;
             font-weight: bold;
             display: none;
+            cursor: not-allowed;
         }
         .match { background: #dcfce7; color: #166534; display: block; }
         .mismatch { background: #fee2e2; color: #991b1b; display: block; }
@@ -194,7 +195,7 @@
             <input type="text" id="compareInput" placeholder="Paste hash here to verify...">
             <button class="action-btn secondary" id="clearVerifyBtn">Clear</button>
         </div>
-        <div id="matchStatus" class="match-status" disabled>Export</div>
+        <div id="matchStatus" class="match-status">Export</div>
         <div class="btn-row">
             <button class="clear-btn" id="exportBtn" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;"></button>
             <button class="clear-btn" id="clearBtn">Clear All</button>
@@ -382,6 +383,7 @@
 </body>
     
 </html>
+
 
 
 
