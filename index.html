@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Hash Tool Pro</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h2 { margin: 0 0 1.5rem 0; color: var(--text-main); text-align: center; }
+
+        .section { margin-bottom: 1.2rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+
+        label { 
+            font-weight: 700; 
+            color: #64748b; 
+            font-size: 0.7rem; 
+            text-transform: uppercase;
+            display: block; 
+            margin-bottom: 8px; 
+            letter-spacing: 0.5px;
+        }
+
+        textarea, input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            box-sizing: border-box;
+            font-size: 0.9rem;
+            outline: none;
+            background: white;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus, input:focus { border-color: var(--primary); }
+
+        .file-input-wrapper {
+            border: 2px dashed var(--border);
+            padding: 2rem 1rem;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+            background: #f8fafc;
+        }
+        .file-input-wrapper.dragover { 
+            border-color: var(--primary); 
+            background: #eef2ff; 
+            color: var(--primary);
+        }
+
+        .input-group { display: flex; gap: 8px; }
+
+        .output-box {
+            flex: 1;
+            padding: 12px;
+            background: #f8fafc;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 13px;
+            word-break: break-all;
+            min-height: 18px;
+        }
+
+        .action-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+        .action-btn:hover { opacity: 0.9; }
+        .action-btn.secondary { background: #64748b; }
+
+        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+
+        .clear-btn {
+            flex: 1;
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .clear-btn:hover { background: #fee2e2; color: #ef4444; }
+
+        .match-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        .match { background: #dcfce7; color: #166534; display: block; }
+        .mismatch { background: #fee2e2; color: #991b1b; display: block; }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1e293b;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            z-index: 1000;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Multi-Hash Utility</h2>
+    
+    <div class="section">
+        <label>Algorithm</label>
+        <select id="algoSelect">
+            <option value="SHA-256">SHA-256 (Secure)</option>
+            <option value="SHA-1">SHA-1</option>
+            <option value="MD5">MD5 (Legacy)</option>
+        </select>
+    </div>
+
+    <div class="section">
+        <label>Input Text</label>
+        <textarea id="inputText" rows="2" placeholder="Type text to hash..."></textarea>
+    </div>
+
+    <div class="section">
+        <label>Upload or Drop File</label>
+        <div class="file-input-wrapper" id="dropZone" onclick="document.getElementById('fileIn').click()">
+            <span id="fileName">Click or Drag & Drop File</span>
+            <input type="file" id="fileIn" hidden>
+        </div>
+    </div>
+
+    <div class="section">
+        <label>Generated Hash</label>
+        <div class="input-group">
+            <div id="resultHash" class="output-box">---</div>
+            <button class="action-btn" id="copyBtn">Copy</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <label>Verify Hash</label>
+        <div class="input-group">
+            <input type="text" id="compareInput" placeholder="Paste hash here to verify...">
+            <button class="action-btn secondary" id="clearVerifyBtn">Clear</button>
+        </div>
+        <div id="matchStatus" class="match-status"></div>
+        <div class="btn-row">
+            <button class="clear-btn" id="exportBtn" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">EXPORT (txt file)</button>
+            <button class="clear-btn" id="clearBtn">Clear All</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast">Action Successful!</div>
+
+<script>
+    // Manual MD5 Implementation
+    function md5(string) {
+        function k(n) { return Math.abs(Math.sin(n)) * 4294967296 | 0; }
+        let a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
+        const s = [7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21];
+        const msg = unescape(encodeURIComponent(string));
+        const l = msg.length, blocks = [(l + 8 >> 6) + 1 << 4];
+        for (let i = 0; i < l; i++) blocks[i >> 2] |= msg.charCodeAt(i) << (i % 4 << 3);
+        blocks[l >> 2] |= 128 << (l % 4 << 3);
+        blocks[(blocks.length >> 4 << 4) + 14] = l * 8;
+        for (let i = 0; i < blocks.length; i += 16) {
+            let aa = a, bb = b, cc = c, dd = d;
+            for (let j = 0; j < 64; j++) {
+                let f, g;
+                if (j < 16) { f = (b & c) | (~b & d); g = j; }
+                else if (j < 32) { f = (d & b) | (~d & c); g = (5 * j + 1) % 16; }
+                else if (j < 48) { f = b ^ c ^ d; g = (3 * j + 5) % 16; }
+                else { f = c ^ (b | ~d); g = (7 * j) % 16; }
+                let temp = d; d = c; c = b;
+                b = b + ( (a + f + k(j + 1) + (blocks[i + g] || 0)) << (j = s[j], j) | (a + f + k(j + 1) + (blocks[i + g] || 0)) >>> (32 - j) );
+                a = temp;
+            }
+            a += aa; b += bb; c += cc; d += dd;
+        }
+        return [a, b, c, d].map(v => {
+            let s = "";
+            for (let i = 0; i < 4; i++) s += ((v >> (i * 8)) & 255).toString(16).padStart(2, '0');
+            return s;
+        }).join('');
+    }
+
+    const resultHash = document.getElementById('resultHash');
+    const compareInput = document.getElementById('compareInput');
+    const matchStatus = document.getElementById('matchStatus');
+    const algoSelect = document.getElementById('algoSelect');
+    const fileName = document.getElementById('fileName');
+    const dropZone = document.getElementById('dropZone');
+    const inputTextArea = document.getElementById('inputText');
+    let currentFileData = null;
+    let lastSourceType = "Text"; 
+
+    async function runHasher() {
+        const text = inputTextArea.value;
+        const algo = algoSelect.value;
+        let data = currentFileData || text;
+
+        if (!data && !currentFileData) { 
+            resultHash.textContent = "---"; 
+            checkMatch(); 
+            return; 
+        }
+
+        if (algo === "MD5") {
+            resultHash.textContent = typeof data === 'string' ? md5(data) : "MD5 File Support Limited";
+        } else {
+            const buffer = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+            const hashBuffer = await crypto.subtle.digest(algo, buffer);
+            resultHash.textContent = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        checkMatch();
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    function handleFile(file) {
+        if (!file) return;
+        fileName.textContent = file.name;
+        inputTextArea.value = "";
+        lastSourceType = `File (${file.name})`;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            currentFileData = ev.target.result;
+            runHasher();
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // Drag and Drop Logic
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        dropZone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    });
+
+    dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragleave'));
+    dropZone.addEventListener('drop', (e) => {
+        dropZone.classList.remove('dragover');
+        handleFile(e.dataTransfer.files[0]);
+    });
+
+    // Listeners
+    inputTextArea.addEventListener('input', () => { 
+        currentFileData = null; 
+        lastSourceType = "Manual Text";
+        runHasher(); 
+    });
+    
+    algoSelect.addEventListener('change', runHasher);
+    document.getElementById('fileIn').addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+    // Copy Hash
+    document.getElementById('copyBtn').addEventListener('click', () => {
+        if (resultHash.textContent === "---") return;
+        navigator.clipboard.writeText(resultHash.textContent).then(() => showToast("Copied to clipboard!"));
+    });
+
+    // Clear Verification Input
+    document.getElementById('clearVerifyBtn').addEventListener('click', () => {
+        compareInput.value = "";
+        checkMatch();
+        showToast("Verification field cleared");
+    });
+
+    // Export to Text File
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        const generatedHash = resultHash.textContent;
+        if (generatedHash === "---") return showToast("No data to export!");
+        
+        const plainText = inputTextArea.value || "[File Content/No Text]";
+        const compareHash = compareInput.value || "[No Hash Provided for Comparison]";
+        
+        let status = "N/A";
+        if (compareInput.value) {
+            status = (generatedHash.toLowerCase() === compareHash.toLowerCase().trim()) ? "MATCH IDENTICAL" : "MISMATCH";
+        }
+
+        const content = `ULTIMATE HASH TOOL - FULL REPORT
+--------------------------------------
+Timestamp:      ${new Date().toLocaleString()}
+Algorithm:      ${algoSelect.value}
+Source Type:    ${lastSourceType}
+
+[1] ORIGINAL INPUT:
+${plainText}
+
+[2] GENERATED HASH:
+${generatedHash}
+
+[3] COMPARED HASH:
+${compareHash}
+
+[4] VERIFICATION STATUS:
+${status}
+--------------------------------------
+Generated by Ultimate Hash Tool Pro`;
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `hash_report_${new Date().getTime()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("Full report exported!");
+    });
+
+    // Clear All
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        inputTextArea.value = "";
+        document.getElementById('fileIn').value = "";
+        compareInput.value = "";
+        fileName.textContent = "Click or Drag & Drop File";
+        resultHash.textContent = "---";
+        currentFileData = null;
+        matchStatus.className = 'match-status';
+        showToast("Cleared all fields");
+    });
+
+    function checkMatch() {
+        const cur = resultHash.textContent.trim().toLowerCase();
+        const tar = compareInput.value.trim().toLowerCase();
+        if (!tar || cur === "---") { matchStatus.className = 'match-status'; return; }
+        if (cur === tar) {
+            matchStatus.textContent = "MATCH IDENTICAL! ✓";
+            matchStatus.className = 'match-status match';
+        } else {
+            matchStatus.textContent = "HASH MISMATCH ✗";
+            matchStatus.className = 'match-status mismatch';
+        }
+    }
+
+    compareInput.addEventListener('input', checkMatch);
+</script>
+</body>
+</html>
