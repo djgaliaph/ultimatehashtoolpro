@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ultimate Hash Tool Pro</title>
-    <link rel="icon" type="image/png" href="h.png">
     <style>
         :root {
             --primary: #6366f1;
@@ -205,16 +204,18 @@
 <div id="toast" class="toast">Action Successful!</div>
 
 <script>
-    // Manual MD5 Implementation
+    // Fixed MD5 Implementation
     function md5(string) {
         function k(n) { return Math.abs(Math.sin(n)) * 4294967296 | 0; }
         let a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
         const s = [7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21];
+        
         const msg = unescape(encodeURIComponent(string));
         const l = msg.length, blocks = [(l + 8 >> 6) + 1 << 4];
         for (let i = 0; i < l; i++) blocks[i >> 2] |= msg.charCodeAt(i) << (i % 4 << 3);
         blocks[l >> 2] |= 128 << (l % 4 << 3);
         blocks[(blocks.length >> 4 << 4) + 14] = l * 8;
+
         for (let i = 0; i < blocks.length; i += 16) {
             let aa = a, bb = b, cc = c, dd = d;
             for (let j = 0; j < 64; j++) {
@@ -223,8 +224,11 @@
                 else if (j < 32) { f = (d & b) | (~d & c); g = (5 * j + 1) % 16; }
                 else if (j < 48) { f = b ^ c ^ d; g = (3 * j + 5) % 16; }
                 else { f = c ^ (b | ~d); g = (7 * j) % 16; }
+                
                 let temp = d; d = c; c = b;
-                b = b + ( (a + f + k(j + 1) + (blocks[i + g] || 0)) << (j = s[j], j) | (a + f + k(j + 1) + (blocks[i + g] || 0)) >>> (32 - j) );
+                let shift = s[j]; // FIXED: Don't overwrite 'j'
+                let total = (a + f + k(j + 1) + (blocks[i + g] || 0));
+                b = b + ( (total << shift) | (total >>> (32 - shift)) );
                 a = temp;
             }
             a += aa; b += bb; c += cc; d += dd;
@@ -257,12 +261,23 @@
             return; 
         }
 
-        if (algo === "MD5") {
-            resultHash.textContent = typeof data === 'string' ? md5(data) : "MD5 File Support Limited";
-        } else {
-            const buffer = typeof data === 'string' ? new TextEncoder().encode(data) : data;
-            const hashBuffer = await crypto.subtle.digest(algo, buffer);
-            resultHash.textContent = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        try {
+            if (algo === "MD5") {
+                // Handle MD5 for both Text and Files
+                let md5Input = data;
+                if (data instanceof ArrayBuffer) {
+                    md5Input = new TextDecoder().decode(data);
+                }
+                resultHash.textContent = md5(md5Input);
+            } else {
+                const buffer = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+                const hashBuffer = await crypto.subtle.digest(algo, buffer);
+                resultHash.textContent = Array.from(new Uint8Array(hashBuffer))
+                    .map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+        } catch (e) {
+            resultHash.textContent = "ERROR";
+            console.error(e);
         }
         checkMatch();
     }
@@ -287,7 +302,7 @@
         reader.readAsArrayBuffer(file);
     }
 
-    // Drag and Drop Logic
+    // Event Listeners
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
         dropZone.addEventListener(evt, (e) => {
             e.preventDefault();
@@ -302,7 +317,6 @@
         handleFile(e.dataTransfer.files[0]);
     });
 
-    // Listeners
     inputTextArea.addEventListener('input', () => { 
         currentFileData = null; 
         lastSourceType = "Manual Text";
@@ -312,63 +326,31 @@
     algoSelect.addEventListener('change', runHasher);
     document.getElementById('fileIn').addEventListener('change', (e) => handleFile(e.target.files[0]));
 
-    // Copy Hash
     document.getElementById('copyBtn').addEventListener('click', () => {
         if (resultHash.textContent === "---") return;
         navigator.clipboard.writeText(resultHash.textContent).then(() => showToast("Copied to clipboard!"));
     });
 
-    // Clear Verification Input
     document.getElementById('clearVerifyBtn').addEventListener('click', () => {
         compareInput.value = "";
         checkMatch();
         showToast("Verification field cleared");
     });
 
-    // Export to Text File
     document.getElementById('exportBtn').addEventListener('click', () => {
         const generatedHash = resultHash.textContent;
         if (generatedHash === "---") return showToast("No data to export!");
         
-        const plainText = inputTextArea.value || "[File Content/No Text]";
-        const compareHash = compareInput.value || "[No Hash Provided for Comparison]";
-        
-        let status = "N/A";
-        if (compareInput.value) {
-            status = (generatedHash.toLowerCase() === compareHash.toLowerCase().trim()) ? "MATCH IDENTICAL" : "MISMATCH";
-        }
-
-        const content = `ULTIMATE HASH TOOL - FULL REPORT
---------------------------------------
-Timestamp:      ${new Date().toLocaleString()}
-Algorithm:      ${algoSelect.value}
-Source Type:    ${lastSourceType}
-
-[1] ORIGINAL INPUT:
-${plainText}
-
-[2] GENERATED HASH:
-${generatedHash}
-
-[3] COMPARED HASH:
-${compareHash}
-
-[4] VERIFICATION STATUS:
-${status}
---------------------------------------
-Generated by Ultimate Hash Tool Pro`;
-
+        const content = `ULTIMATE HASH TOOL REPORT\n----------------\nAlgo: ${algoSelect.value}\nHash: ${generatedHash}`;
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `hash_report_${new Date().getTime()}.txt`;
+        a.download = `hash_report.txt`;
         a.click();
         URL.revokeObjectURL(url);
-        showToast("Full report exported!");
     });
 
-    // Clear All
     document.getElementById('clearBtn').addEventListener('click', () => {
         inputTextArea.value = "";
         document.getElementById('fileIn').value = "";
@@ -377,7 +359,6 @@ Generated by Ultimate Hash Tool Pro`;
         resultHash.textContent = "---";
         currentFileData = null;
         matchStatus.className = 'match-status';
-        showToast("Cleared all fields");
     });
 
     function checkMatch() {
@@ -396,5 +377,4 @@ Generated by Ultimate Hash Tool Pro`;
     compareInput.addEventListener('input', checkMatch);
 </script>
 </body>
-
 </html>
